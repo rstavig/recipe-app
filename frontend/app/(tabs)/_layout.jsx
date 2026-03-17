@@ -1,22 +1,21 @@
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
-import { Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: COLORS.primary,
-        tabBarInactiveTintColor: COLORS.textSecondary,
+        tabBarActiveTintColor: COLORS.textSecondary,
         headerShown: false,
         tabBarStyle: {
           backgroundColor: COLORS.background,
           paddingBottom: insets.bottom,
-          height: 60,
+          height: 60 + insets.bottom,
         },
         tabBarLabelStyle: {
           fontSize: 14,
@@ -52,9 +51,12 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name='profileScreen'
+        name='mystuff'
+        listeners={{
+          tabPress: () => router.replace('/mystuff'),
+        }}
         options={{
-          title: 'Profile',
+          title: 'My Stuff',
           tabBarIcon: ({ color }) => (
             <Ionicons name='person-outline' size={24} color={color} />
           ),

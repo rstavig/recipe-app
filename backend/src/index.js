@@ -1,8 +1,9 @@
 import express from 'express';
 import cors from 'cors';
 import 'dotenv/config';
-
+import recipeRoutes from './routes/recipeRoutes.js';
 import authRoutes from './routes/authRoutes.js';
+import favoriteRoutes from './routes/favoriteRoutes.js';
 
 import { connectDB } from './lib/db.js';
 
@@ -16,6 +17,8 @@ app.use(express.urlencoded({ limit: '5mb', extended: true }));
 app.use(cors());
 
 app.use('/api/auth', authRoutes);
+app.use('/api/recipes', recipeRoutes);
+app.use('/api/favorites', favoriteRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

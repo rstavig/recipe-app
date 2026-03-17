@@ -73,101 +73,19 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 8,
   },
-  booksHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
+  buttonContainer: {
+    margin: 20,
   },
-  booksTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-  },
-  booksCount: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-  },
-  booksList: {
-    paddingBottom: 20,
-  },
-  bookItem: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.cardBackground,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  bookImage: {
-    width: 70,
-    height: 100,
-    borderRadius: 8,
-    marginRight: 12,
-  },
-  bookInfo: {
-    flex: 1,
-    justifyContent: 'space-between',
-  },
-  bookTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.textPrimary,
-    marginBottom: 4,
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    marginBottom: 4,
-  },
-  bookCaption: {
-    fontSize: 14,
-    color: COLORS.textDark,
-    marginBottom: 4,
-    flex: 1,
-  },
-  bookDate: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-  },
-  deleteButton: {
-    padding: 8,
-    justifyContent: 'center',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 40,
-    marginTop: 20,
-  },
-  emptyText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.textPrimary,
-    marginTop: 16,
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  addButton: {
+  myFavoritesButton: {
     backgroundColor: COLORS.primary,
     borderRadius: 12,
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 20,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
   },
-  addButtonText: {
+  myFavoritesButtonText: {
     color: COLORS.white,
     fontWeight: '600',
-    fontSize: 14,
+    fontSize: 16,
   },
 });
 

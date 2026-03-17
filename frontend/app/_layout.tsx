@@ -1,4 +1,4 @@
-import { SplashScreen, Stack, Redirect, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import SafeScreen from '../components/SafeScreen';
 import { StatusBar } from 'expo-status-bar';
@@ -6,26 +6,31 @@ import { useAuthStore } from '../store/authStore';
 import { useEffect } from 'react';
 
 export default function RootLayout() {
+  const router = useRouter();
   const segments = useSegments();
-  const { checkAuth, user, token, isCheckingAuth } = useAuthStore();
+  const { user, token, isCheckingAuth, checkAuth } = useAuthStore();
 
   useEffect(() => {
     checkAuth();
-  }, []);
+  }, [checkAuth]);
 
-  // Show nothing while checking auth
-  if (isCheckingAuth) return null;
+  useEffect(() => {
+    if (isCheckingAuth) return;
 
-  const inAuthScreen = segments[0] === '(auth)';
-  const isSignedIn = user && token;
-
-  // Redirect based on auth state
-  if (!isSignedIn && !inAuthScreen) {
-    return <Redirect href="/(auth)" />;
-  }
-  if (isSignedIn && inAuthScreen) {
-    return <Redirect href="/(tabs)" />;
-  }
+    const inAuthScreen = segments[0] === '(auth)';
+    const isSignedIn = user && token;
+    console.log('Auth check:', {
+      isSignedIn,
+      inAuthScreen,
+      segments,
+      user,
+      token,
+    });
+    if (!isSignedIn && !inAuthScreen) {
+      console.log('Navigating to auth screen');
+      router.replace('/(auth)');
+    } else if (isSignedIn && inAuthScreen) router.replace('/(tabs)');
+  }, [user, token, segments, isCheckingAuth, router]);
 
   return (
     <SafeAreaProvider>

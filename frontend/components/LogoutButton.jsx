@@ -3,7 +3,6 @@ import { useAuthStore } from '../store/authStore';
 import styles from '../assets/styles/profile.styles';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../constants/colors';
-import { router, useRouter } from 'expo-router';
 
 export default function LogoutButton() {
   const { logout } = useAuthStore();

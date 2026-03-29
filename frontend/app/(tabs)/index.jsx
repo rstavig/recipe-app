@@ -3,7 +3,6 @@ import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { useEffect, useState } from 'react';
 import { COLORS } from '../../constants/colors';
-import SafeScreen from '../../components/SafeScreen';
 import { useAuthStore } from '../../store/authStore';
 import { homeStyles } from '../../assets/styles/home.styles';
 import Loader from '../../components/Loader';
@@ -82,7 +81,7 @@ export default function Home() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await sleep(2000);
+    // await sleep(2000);
     await loadData();
     setRefreshing(false);
   };
@@ -91,8 +90,7 @@ export default function Home() {
     loadData();
   }, []);
 
-  if (loading && !refreshing)
-    return <Loader message='Loading delicions recipes...' />;
+  if (loading && !refreshing) return <Loader message='Loading recipes...' />;
 
   return (
     <View style={homeStyles.container}>

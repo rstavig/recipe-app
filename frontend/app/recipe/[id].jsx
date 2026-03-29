@@ -15,26 +15,56 @@ import { Ionicons } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
 
 const RecipeDetailScreen = () => {
-  const { id: recipeId } = useLocalSearchParams();
+  const params = useLocalSearchParams();
+  const recipeId = params.id;
+  const sourceType = params.sourceType;
+
   const router = useRouter();
 
   const [recipe, setRecipe] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isSaved, setIsSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [favoriteId, setFavoriteId] = useState(null);
 
-  const { user } = useAuthStore();
-  const userId = user?.id;
+  const { user, token, isCheckingAuth } = useAuthStore();
+
+  const recipeDataString = params.recipeData || null;
+  const recipeData = recipeDataString ? JSON.parse(recipeDataString) : null;
 
   useEffect(() => {
+    console.log('useEffect triggered', {
+      recipeId,
+      sourceType,
+      recipeDataString,
+      user,
+      token,
+      isCheckingAuth,
+    });
+
+    if (isCheckingAuth) return;
+    if (!user || !token) return;
+
     const checkIfSaved = async () => {
       try {
-        const response = await fetch(`${API_URL}/favorites/${userId}`);
-        const favorites = await response.json();
-        const isRecipeSaved = favorites.some(
-          (fav) => fav.recipeId === parseInt(recipeId),
-        );
-        setIsSaved(isRecipeSaved);
+        if (!user || !user.token) {
+          console.error('No user or token found!');
+          return;
+        }
+
+        const response = await fetch(`${API_URL}/${user._id}/favorites`, {
+          headers: {
+            Authorization: `Bearer ${user.token}`,
+          },
+        });
+
+        if (!response.ok) throw new Error('Failed to fetch favorites');
+        const data = await response.json();
+
+        // find the favorite for this recipe (by apiId)
+        const favorite = data.favorites.find((fav) => fav.apiId === recipeId);
+        setIsSaved(!!favorite);
+        setFavoriteId(favorite ? favorite._id : null);
       } catch (error) {
         console.error('Error checking if recipe is saved:', error);
       }
@@ -43,16 +73,73 @@ const RecipeDetailScreen = () => {
     const loadRecipeDetail = async () => {
       setLoading(true);
       try {
-        const mealData = await MealAPI.getMealById(recipeId);
-        if (mealData) {
-          const transformedRecipe = MealAPI.transformMealData(mealData);
+        if (sourceType === 'api') {
+          // fetch from TheMealDB API
+          const mealData = await MealAPI.getMealById(recipeId);
 
-          const recipeWithVideo = {
-            ...transformedRecipe,
-            youtubeUrl: mealData.strYoutube || null,
+          console.log('mealData:', mealData);
+
+          if (mealData) {
+            const transformedRecipe = MealAPI.transformMealData(mealData);
+
+            console.log(transformedRecipe);
+
+            const recipeWithVideo = {
+              ...transformedRecipe,
+              youtubeUrl: mealData.strYoutube || null,
+            };
+
+            setRecipe(recipeWithVideo);
+          }
+        } else if (sourceType === 'user') {
+          let userRecipe = null;
+
+          if (recipeData) {
+            // If recipeData is a string (from router params), parse it
+            userRecipe =
+              typeof recipeData === 'string'
+                ? JSON.parse(recipeData)
+                : recipeData;
+
+            console.log('userRecipe from params:', userRecipe);
+          } else {
+            // Fetch from backend if not passed in
+            const response = await fetch(
+              `http://localhost:3000/api/recipes/${recipeId}`,
+              {
+                headers: { Authorization: `Bearer ${user.token}` },
+              },
+            );
+            const data = await response.json();
+            userRecipe = data.recipe;
+            console.log('userRecipe from backend:', userRecipe);
+          }
+
+          // Transform to match frontend expectations
+          let baseRecipe = userRecipe;
+          if (userRecipe.recipeId && typeof userRecipe.recipeId === 'object') {
+            baseRecipe = { ...userRecipe.recipeId, ...userRecipe }; // recipeId fields take priority
+          }
+
+          const transformedUserRecipe = {
+            ...baseRecipe,
+            imageUrl: baseRecipe.imageUrl || baseRecipe.image || '', // fallback if needed
+            title: baseRecipe.title,
+            category: baseRecipe.category,
+            cookTime: baseRecipe.cookTime,
+            servings: baseRecipe.servings,
+            description: baseRecipe.description,
+            ingredients: Array.isArray(baseRecipe.ingredients)
+              ? baseRecipe.ingredients
+              : (baseRecipe.ingredients || '').split('\n').filter(Boolean),
+            instructions: Array.isArray(baseRecipe.instructions)
+              ? baseRecipe.instructions
+              : (baseRecipe.instructions || '').split('\n').filter(Boolean),
           };
 
-          setRecipe(recipeWithVideo);
+          console.log('transformedUserRecipe:', transformedUserRecipe);
+
+          setRecipe(transformedUserRecipe);
         }
       } catch (error) {
         console.error('Error loading recipe detail:', error);
@@ -60,10 +147,9 @@ const RecipeDetailScreen = () => {
         setLoading(false);
       }
     };
-
     checkIfSaved();
     loadRecipeDetail();
-  }, [recipeId, userId]);
+  }, [recipeId, sourceType, recipeDataString, user, token, isCheckingAuth]);
 
   const getYouTubeEmbedUrl = (url) => {
     // example url: https://www.youtube.com/watch?v=mTvlmY4vCug
@@ -75,31 +161,42 @@ const RecipeDetailScreen = () => {
     setIsSaving(true);
 
     try {
-      if (isSaved) {
-        // remove from favorites
-        const response = await fetch(
-          `${API_URL}/favorites/${userId}/${recipeId}`,
-          {
-            method: 'DELETE',
+      if (isSaved && favoriteId) {
+        if (!user || !user.token) {
+          console.error('No user or token found in HTS!');
+          return;
+        }
+
+        // need to know favorite's MongoDB _id to delete
+        const response = await fetch(`${API_URL}/${favoriteId}`, {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${user.token}`,
           },
-        );
+        });
         if (!response.ok) throw new Error('Failed to remove recipe');
 
         setIsSaved(false);
+        // setFavoriteId(null);
       } else {
         // add to favorites
-        const response = await fetch(`${API_URL}/favorites`, {
+
+        if (!user || !user.token) {
+          console.error('No user or token found in ADD function!');
+          return;
+        }
+        const response = await fetch(`${API_URL}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            Authorization: `Bearer ${user.token}`,
           },
           body: JSON.stringify({
-            userId,
-            recipeId: parseInt(recipeId),
+            sourceType: 'api',
+            apiId: recipe.idMeal,
             title: recipe.title,
-            image: recipe.image,
-            cookTime: recipe.cookTime,
-            servings: recipe.servings,
+            imageUrl: recipe.image,
+            category: recipe.category,
           }),
         });
 
@@ -114,7 +211,11 @@ const RecipeDetailScreen = () => {
     }
   };
 
+  if (isCheckingAuth) return <Loader message='Checking authentication...' />;
+  if (!user || !token)
+    return <Text>You must be logged in to view this page.</Text>;
   if (loading) return <Loader message='Loading recipe details...' />;
+  if (!recipe) return <Text>Recipe not found.</Text>;
 
   return (
     <View style={recipeDetailStyles.container}>
@@ -122,11 +223,15 @@ const RecipeDetailScreen = () => {
         {/* HEADER */}
         <View style={recipeDetailStyles.headerContainer}>
           <View style={recipeDetailStyles.imageContainer}>
-            <Image
-              source={{ uri: recipe.image }}
-              style={recipeDetailStyles.headerImage}
-              contentFit='cover'
-            />
+            {recipe?.imageUrl ? (
+              <Image
+                source={{ uri: recipe.image || recipe.imageUrl }}
+                style={recipeDetailStyles.headerImage}
+                contentFit='cover'
+              />
+            ) : (
+              <View style={recipeDetailStyles.headerImage} />
+            )}
           </View>
 
           <LinearGradient
@@ -251,31 +356,34 @@ const RecipeDetailScreen = () => {
               <Text style={recipeDetailStyles.sectionTitle}>Ingredients</Text>
               <View style={recipeDetailStyles.countBadge}>
                 <Text style={recipeDetailStyles.countText}>
-                  {recipe.ingredients.length}
+                  {Array.isArray(recipe.ingredients)
+                    ? recipe.ingredients.length
+                    : 0}
                 </Text>
               </View>
             </View>
 
             <View style={recipeDetailStyles.ingredientsGrid}>
-              {recipe.ingredients.map((ingredient, index) => (
-                <View key={index} style={recipeDetailStyles.ingredientCard}>
-                  <View style={recipeDetailStyles.ingredientNumber}>
-                    <Text style={recipeDetailStyles.ingredientNumberText}>
-                      {index + 1}
+              {Array.isArray(recipe.ingredients) &&
+                recipe.ingredients.map((ingredient, index) => (
+                  <View key={index} style={recipeDetailStyles.ingredientCard}>
+                    <View style={recipeDetailStyles.ingredientNumber}>
+                      <Text style={recipeDetailStyles.ingredientNumberText}>
+                        {index + 1}
+                      </Text>
+                    </View>
+                    <Text style={recipeDetailStyles.ingredientText}>
+                      {ingredient}
                     </Text>
+                    <View style={recipeDetailStyles.ingredientCheck}>
+                      <Ionicons
+                        name='checkmark-circle-outline'
+                        size={20}
+                        color={COLORS.textLight}
+                      />
+                    </View>
                   </View>
-                  <Text style={recipeDetailStyles.ingredientText}>
-                    {ingredient}
-                  </Text>
-                  <View style={recipeDetailStyles.ingredientCheck}>
-                    <Ionicons
-                      name='checkmark-circle-outline'
-                      size={20}
-                      color={COLORS.textLight}
-                    />
-                  </View>
-                </View>
-              ))}
+                ))}
             </View>
           </View>
 
@@ -291,42 +399,45 @@ const RecipeDetailScreen = () => {
               <Text style={recipeDetailStyles.sectionTitle}>Instructions</Text>
               <View style={recipeDetailStyles.countBadge}>
                 <Text style={recipeDetailStyles.countText}>
-                  {recipe.instructions.length}
+                  {Array.isArray(recipe.instructions)
+                    ? recipe.instructions.length
+                    : 0}
                 </Text>
               </View>
             </View>
             <View style={recipeDetailStyles.instructionsContainer}>
-              {recipe.instructions.map((instruction, index) => (
-                <View key={index} style={recipeDetailStyles.instructionCard}>
-                  <LinearGradient
-                    colors={[COLORS.primary, COLORS.primary + 'CC']}
-                    style={recipeDetailStyles.stepIndicator}
-                  >
-                    <Text style={recipeDetailStyles.stepNumber}>
-                      {index + 1}
-                    </Text>
-                  </LinearGradient>
-                  <View style={recipeDetailStyles.instructionContent}>
-                    <Text style={recipeDetailStyles.instructionText}>
-                      {instruction}
-                    </Text>
-                    <View style={recipeDetailStyles.instructionFooter}>
-                      <Text style={recipeDetailStyles.stepLabel}>
-                        Step {index + 1}
+              {Array.isArray(recipe.instructions) &&
+                recipe.instructions.map((instruction, index) => (
+                  <View key={index} style={recipeDetailStyles.instructionCard}>
+                    <LinearGradient
+                      colors={[COLORS.primary, COLORS.primary + 'CC']}
+                      style={recipeDetailStyles.stepIndicator}
+                    >
+                      <Text style={recipeDetailStyles.stepNumber}>
+                        {index + 1}
                       </Text>
-                      <TouchableOpacity
-                        style={recipeDetailStyles.completeButton}
-                      >
-                        <Ionicons
-                          name='checkmark'
-                          size={16}
-                          color={COLORS.primary}
-                        />
-                      </TouchableOpacity>
+                    </LinearGradient>
+                    <View style={recipeDetailStyles.instructionContent}>
+                      <Text style={recipeDetailStyles.instructionText}>
+                        {instruction}
+                      </Text>
+                      <View style={recipeDetailStyles.instructionFooter}>
+                        <Text style={recipeDetailStyles.stepLabel}>
+                          Step {index + 1}
+                        </Text>
+                        <TouchableOpacity
+                          style={recipeDetailStyles.completeButton}
+                        >
+                          <Ionicons
+                            name='checkmark'
+                            size={16}
+                            color={COLORS.primary}
+                          />
+                        </TouchableOpacity>
+                      </View>
                     </View>
                   </View>
-                </View>
-              ))}
+                ))}
             </View>
           </View>
 

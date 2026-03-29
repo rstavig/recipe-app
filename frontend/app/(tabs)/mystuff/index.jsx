@@ -7,7 +7,7 @@ import LogoutButton from '../../../components/LogoutButton';
 
 const MyStuffScreen = () => {
   const { token } = useAuthStore();
-  console.log('My Stuff screen: token =', token);
+  // console.log('My Stuff screen: token =', token);
 
   const router = useRouter();
 

@@ -11,15 +11,26 @@ export default function RecipeCard({ recipe }) {
   return (
     <TouchableOpacity
       style={recipeCardStyles.container}
-      onPress={() => router.push(`/recipe/${recipe.id}`)}
+      onPress={() => {
+        router.push({
+          pathname: `/recipe/${recipe.id}`,
+          params: {
+            sourceType: recipe.sourceType, // 'api' or 'user'
+            // Only pass the full recipe data for user recipes if needed:
+            ...(recipe.sourceType === 'user' && {
+              recipeData: JSON.stringify(recipe),
+            }),
+          },
+        });
+      }}
       activeOpacity={0.8}
     >
       <View style={recipeCardStyles.imageContainer}>
         <Image
-          source={{ uri: recipe.image }}
+          source={{ uri: recipe.image || recipe.imageUrl }} // support both 'image' and 'imageUrl' fields
           style={recipeCardStyles.image}
           contentFit='cover'
-          // transition={300}
+          transition={300}
         />
       </View>
 
@@ -38,7 +49,7 @@ export default function RecipeCard({ recipe }) {
             <View style={recipeCardStyles.timeContainer}>
               <Ionicons
                 name='time-outline'
-                size={14}
+                size={16}
                 color={COLORS.textLight}
               />
               <Text style={recipeCardStyles.timeText}>{recipe.cookTime}</Text>

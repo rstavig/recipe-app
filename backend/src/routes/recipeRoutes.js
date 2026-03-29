@@ -67,12 +67,13 @@ router.get('/', async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 });
-// Get all recipes for a logged in user
-router.get('/api/recipes/mine', protectRoute, async (req, res) => {
+// Route for getting all recipes for a user
+router.get('/', protectRoute, async (req, res) => {
   try {
-    const { userId } = req.user._id;
-    const recipes = await Recipe.find({ userId });
-    res.status(200).json({ recipes });
+    const recipes = await Recipe.find({ userId: req.user._id });
+    res.status(200).json({
+      recipes,
+    });
   } catch (error) {
     console.log('Error in recipe route', error);
     res.status(500).json({ message: 'Internal server error' });

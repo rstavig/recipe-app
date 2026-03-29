@@ -7,7 +7,7 @@ import {
   FlatList,
 } from 'react-native';
 import { MealAPI } from '../../services/mealAPI';
-import { useDebounce } from '../hooks/useDebounce';
+// import { useDebounce } from '../hooks/useDebounce';
 import { searchStyles } from '../../assets/styles/search.styles';
 import { COLORS } from '../../constants/colors';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,7 +20,7 @@ const SearchScreen = () => {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
 
-  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+  // const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
   const performSearch = async (query) => {
     // if no search query
@@ -67,7 +67,7 @@ const SearchScreen = () => {
       setLoading(true);
 
       try {
-        const results = await performSearch(debouncedSearchQuery);
+        const results = await performSearch();
         setRecipes(results);
       } catch (error) {
         console.error('Error searching:', error);
@@ -78,7 +78,7 @@ const SearchScreen = () => {
     };
 
     handleSearch();
-  }, [debouncedSearchQuery, initialLoading]);
+  }, [initialLoading]);
 
   if (initialLoading) return <Loader message='Loading recipes...' />;
 

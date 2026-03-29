@@ -7,10 +7,13 @@ const router = express.Router();
 // Route for creating a new favorite recipe
 router.post('/', protectRoute, async (req, res) => {
   try {
-    const { sourceType, recipeId } = req.body;
+    const { sourceType, recipeId, imageUrl, category, title } = req.body;
     const favorite = new Favorite({
       sourceType,
-      recipeId,
+      apiId: recipeId,
+      title,
+      imageUrl,
+      category,
       userId: req.user._id,
     });
 
@@ -28,12 +31,12 @@ router.post('/', protectRoute, async (req, res) => {
 // Route for getting all favorite recipes for a user
 router.get('/', protectRoute, async (req, res) => {
   try {
-    const favorites = await Favorite.find({ userId: req.user._id });
-    res.status(200).json({
-      favorites,
-    });
+    const favorites = await Favorite.find({ userId: req.user._id }).populate(
+      'recipeId',
+    );
+    res.status(200).json({ favorites });
   } catch (error) {
-    console.log('Error in favorite route', error);
+    console.error('Error fetching favorites:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 });

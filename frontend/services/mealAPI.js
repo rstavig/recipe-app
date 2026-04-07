@@ -19,14 +19,17 @@ export const MealAPI = {
   getMealById: async (id) => {
     try {
       const response = await fetch(`${BASE_URL}/lookup.php?i=${id}`);
-      const data = await response.json();
+      const text = await response.text();
+      console.log('Raw response:', text);
+
+      const data = JSON.parse(text);
+
       return data.meals ? data.meals[0] : null;
     } catch (error) {
       console.error('Error getting meal by id:', error);
       return null;
     }
   },
-
   // lookup a single random meal
   getRandomMeal: async () => {
     try {
@@ -38,7 +41,6 @@ export const MealAPI = {
       return null;
     }
   },
-
   // get multiple random meals
   getRandomMeals: async (count = 6) => {
     try {

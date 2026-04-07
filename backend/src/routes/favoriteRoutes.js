@@ -7,15 +7,17 @@ const router = express.Router();
 // Route for creating a new favorite recipe
 router.post('/', protectRoute, async (req, res) => {
   try {
-    const { sourceType, recipeId, imageUrl, category, title } = req.body;
+    const { sourceType, apiId, recipeId, imageUrl, category, title } = req.body;
     const favorite = new Favorite({
       sourceType,
-      apiId: recipeId,
+      apiId: sourceType === 'api' ? apiId : undefined,
+      recipeId: sourceType === 'user' ? recipeId : undefined,
       title,
       imageUrl,
       category,
       userId: req.user._id,
     });
+    console.log(favorite);
 
     await favorite.save();
 

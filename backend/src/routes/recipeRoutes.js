@@ -17,7 +17,6 @@ router.post('/', protectRoute, async (req, res) => {
       ingredients,
       instructions,
       imageUrl,
-      userId,
     } = req.body;
 
     const recipe = new Recipe({
@@ -30,7 +29,7 @@ router.post('/', protectRoute, async (req, res) => {
       ingredients,
       instructions,
       imageUrl,
-      userId,
+      userId: req.user._id,
     });
 
     await recipe.save();
@@ -68,7 +67,7 @@ router.get('/', async (req, res) => {
   }
 });
 // Route for getting all recipes for a user
-router.get('/', protectRoute, async (req, res) => {
+router.get('/mine', protectRoute, async (req, res) => {
   try {
     const recipes = await Recipe.find({ userId: req.user._id });
     res.status(200).json({

@@ -21,7 +21,6 @@ export default function Home() {
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [recipes, setRecipes] = useState([]);
-  const [featuredRecipe, setFeaturedRecipe] = useState(null);
   const [meals, setMeals] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -29,10 +28,9 @@ export default function Home() {
     try {
       setLoading(true);
 
-      const [apiCategories, randomMeals, featuredMeal] = await Promise.all([
+      const [apiCategories, randomMeals] = await Promise.all([
         MealAPI.getCategories(),
         MealAPI.getRandomMeals(12),
-        MealAPI.getRandomMeal(),
       ]);
 
       const transformedCategories = apiCategories.map((cat, index) => ({
@@ -51,9 +49,6 @@ export default function Home() {
         .filter((meal) => meal !== null);
 
       setRecipes(transformedMeals);
-
-      const transformedFeatured = MealAPI.transformMealData(featuredMeal);
-      setFeaturedRecipe(transformedFeatured);
     } catch (error) {
       console.log('Error loading the data', error);
     } finally {
@@ -81,7 +76,7 @@ export default function Home() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    // await sleep(2000);
+    await sleep(2000);
     await loadData();
     setRefreshing(false);
   };
@@ -91,6 +86,8 @@ export default function Home() {
   }, []);
 
   if (loading && !refreshing) return <Loader message='Loading recipes...' />;
+
+  console.log(recipes);
 
   return (
     <View style={homeStyles.container}>
@@ -144,7 +141,7 @@ export default function Home() {
 
             {categories.length > 0 && (
               <CategoryFilter
-                categories={categories || []}
+                categories={categories || [0]}
                 selectedCategory={selectedCategory}
                 onSelectCategory={handleCategorySelect}
               />
@@ -158,8 +155,18 @@ export default function Home() {
               {recipes.length > 0 ? (
                 <FlatList
                   data={recipes}
-                  renderItem={({ item }) => <RecipeCard recipe={item} />}
-                  keyExtractor={(item) => item.id.toString()}
+                  keyExtractor={(item) => item._id || item.id}
+                  renderItem={({ item }) => {
+                    // Normalize the recipe object here:
+                    const normalizedRecipe = {
+                      ...item,
+                      id: item.id || item._id, // always provide 'id'
+                      sourceType: 'api',
+                      image: item.image || item.imageUrl || item.strMealThumb, // fallback for image
+                      // Add any other normalization as needed
+                    };
+                    return <RecipeCard recipe={normalizedRecipe} />;
+                  }}
                   numColumns={2}
                   columnWrapperStyle={homeStyles.row}
                   contentContainerStyle={homeStyles.recipesGrid}

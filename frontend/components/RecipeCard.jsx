@@ -15,9 +15,8 @@ export default function RecipeCard({ recipe }) {
         router.push({
           pathname: `/recipe/${recipe.id}`,
           params: {
-            sourceType: recipe.sourceType, // 'api' or 'user'
-            // Only pass the full recipe data for user recipes if needed:
-            ...(recipe.sourceType === 'user' && {
+            sourceType: recipe.sourceType,
+            ...(recipe.sourceType === 'api' && {
               recipeData: JSON.stringify(recipe),
             }),
           },
@@ -27,7 +26,7 @@ export default function RecipeCard({ recipe }) {
     >
       <View style={recipeCardStyles.imageContainer}>
         <Image
-          source={{ uri: recipe.image || recipe.imageUrl }} // support both 'image' and 'imageUrl' fields
+          source={{ uri: recipe.imageUrl || recipe.image }} // support both 'image' and 'imageUrl' fields
           style={recipeCardStyles.image}
           contentFit='cover'
           transition={300}
@@ -59,7 +58,7 @@ export default function RecipeCard({ recipe }) {
             <View style={recipeCardStyles.servingsContainer}>
               <Ionicons
                 name='people-outline'
-                size={14}
+                size={16}
                 color={COLORS.textLight}
               />
               <Text style={recipeCardStyles.servingsText}>

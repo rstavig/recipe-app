@@ -30,7 +30,7 @@ export default function RootLayout() {
       console.log('Navigating to auth screen');
       router.replace('/(auth)');
     } else if (isSignedIn && inAuthScreen) router.replace('/(tabs)');
-  }, [user, token, segments, isCheckingAuth, router]);
+  }, [user, token, segments, isCheckingAuth, checkAuth, router]);
 
   return (
     <SafeAreaProvider>

@@ -1,7 +1,12 @@
 import { View, Text, Alert, ScrollView, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { API_URL } from '../../constants/api';
+import { useCallback, useEffect, useState, useMemo } from 'react';
+import {
+  API_URL,
+  API_RECIPE_URL,
+  API_MY_RECIPES_URL,
+  API_RECIPES_URL,
+} from '../../constants/api';
 import { MealAPI } from '../../services/mealAPI';
 import Loader from '../../components/Loader';
 import { useAuthStore } from '../../store/authStore';
@@ -30,126 +35,145 @@ const RecipeDetailScreen = () => {
   const { user, token, isCheckingAuth } = useAuthStore();
 
   const recipeDataString = params.recipeData || null;
-  const recipeData = recipeDataString ? JSON.parse(recipeDataString) : null;
+
+  // Only parse when recipeDataString changes
+  const recipeData = useMemo(
+    () => (recipeDataString ? JSON.parse(recipeDataString) : null),
+    [recipeDataString],
+  );
+
+  const checkIfSaved = useCallback(async () => {
+    try {
+      if (!user || !token) {
+        console.error('No user or token found!');
+        return;
+      }
+
+      const response = await fetch(`${API_URL}/favorites`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) throw new Error('Failed to fetch favorites');
+      const data = await response.json();
+      const favorite = data.favorites.find(
+        (fav) => fav.apiId === recipeId || fav.recipeId === recipeId,
+      );
+      setIsSaved(!!favorite);
+      setFavoriteId(favorite ? favorite._id : null);
+
+      // console.log('checkIfSaved:', !!favorite);
+    } catch (error) {
+      console.error('Error checking if recipe is saved:', error);
+    }
+  }, [user, token, recipeId]);
+
+  const loadRecipeDetail = useCallback(async () => {
+    setLoading(true);
+    try {
+      if (sourceType === 'api') {
+        if (!/^\d+$/.test(recipeId)) {
+          console.error('Invalid TheMealDB id:', recipeId);
+          setRecipe(null);
+          return;
+        }
+
+        const mealData = await MealAPI.getMealById(recipeId);
+
+        if (mealData && typeof mealData === 'object') {
+          const transformedRecipe = MealAPI.transformMealData(mealData);
+          const recipeWithVideo = {
+            ...transformedRecipe,
+            youtubeUrl: mealData.strYoutube || null,
+          };
+          console.log('API transformedRecipe:', recipeWithVideo);
+          setRecipe(recipeWithVideo);
+        } else {
+          console.error('mealData is not a valid object:', mealData);
+          setRecipe(null);
+        }
+      } else if (sourceType === 'user') {
+        let userRecipe = null;
+        if (recipeData) {
+          userRecipe =
+            typeof recipeData === 'string'
+              ? JSON.parse(recipeData)
+              : recipeData;
+
+          console.log('userRecipe:', userRecipe);
+        } else {
+          const response = await fetch(`${API_RECIPE_URL}/${recipeId}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const data = await response.json();
+
+          console.log('data from backend:', recipeId);
+
+          userRecipe = data.recipe;
+          console.log('userRecipe from backend:', userRecipe);
+        }
+        if (!userRecipe) {
+          setRecipe(null);
+          return;
+        }
+        let baseRecipe = userRecipe;
+        if (userRecipe.recipeId && typeof userRecipe.recipeId === 'object') {
+          baseRecipe = { ...userRecipe.recipeId, ...userRecipe };
+        }
+        const transformedUserRecipe = {
+          ...baseRecipe,
+          imageUrl: baseRecipe.imageUrl || baseRecipe.image || '', // always set imageUrl
+          title: baseRecipe.title || '',
+          category: baseRecipe.category || '',
+          cookTime: baseRecipe.cookTime || '',
+          servings: baseRecipe.servings || '',
+          description: baseRecipe.description || '',
+          ingredients: Array.isArray(baseRecipe.ingredients)
+            ? baseRecipe.ingredients
+            : (baseRecipe.ingredients || '').split('\n').filter(Boolean),
+          instructions: Array.isArray(baseRecipe.instructions)
+            ? baseRecipe.instructions
+            : (baseRecipe.instructions || '').split('\n').filter(Boolean),
+        };
+        console.log('User transformedRecipe:', transformedUserRecipe);
+        setRecipe(transformedUserRecipe);
+      }
+    } catch (error) {
+      console.error('Error loading recipe detail:', error);
+      setRecipe(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [recipeId, sourceType, recipeData, token]);
 
   useEffect(() => {
-    console.log('useEffect triggered', {
-      recipeId,
-      sourceType,
-      recipeDataString,
-      user,
-      token,
-      isCheckingAuth,
-    });
+    // console.log('useEffect triggered', {
+    //   recipeId,
+    //   sourceType,
+    //   recipeDataString,
+    //   user,
+    //   token,
+    //   isCheckingAuth,
+    // });
 
     if (isCheckingAuth) return;
     if (!user || !token) return;
 
-    const checkIfSaved = async () => {
-      try {
-        if (!user || !user.token) {
-          console.error('No user or token found!');
-          return;
-        }
+    checkIfSaved();
 
-        const response = await fetch(`${API_URL}/${user._id}/favorites`, {
-          headers: {
-            Authorization: `Bearer ${user.token}`,
-          },
-        });
-
-        if (!response.ok) throw new Error('Failed to fetch favorites');
-        const data = await response.json();
-
-        // find the favorite for this recipe (by apiId)
-        const favorite = data.favorites.find((fav) => fav.apiId === recipeId);
-        setIsSaved(!!favorite);
-        setFavoriteId(favorite ? favorite._id : null);
-      } catch (error) {
-        console.error('Error checking if recipe is saved:', error);
-      }
-    };
-
-    const loadRecipeDetail = async () => {
-      setLoading(true);
-      try {
-        if (sourceType === 'api') {
-          // fetch from TheMealDB API
-          const mealData = await MealAPI.getMealById(recipeId);
-
-          console.log('mealData:', mealData);
-
-          if (mealData) {
-            const transformedRecipe = MealAPI.transformMealData(mealData);
-
-            console.log(transformedRecipe);
-
-            const recipeWithVideo = {
-              ...transformedRecipe,
-              youtubeUrl: mealData.strYoutube || null,
-            };
-
-            setRecipe(recipeWithVideo);
-          }
-        } else if (sourceType === 'user') {
-          let userRecipe = null;
-
-          if (recipeData) {
-            // If recipeData is a string (from router params), parse it
-            userRecipe =
-              typeof recipeData === 'string'
-                ? JSON.parse(recipeData)
-                : recipeData;
-
-            console.log('userRecipe from params:', userRecipe);
-          } else {
-            // Fetch from backend if not passed in
-            const response = await fetch(
-              `http://localhost:3000/api/recipes/${recipeId}`,
-              {
-                headers: { Authorization: `Bearer ${user.token}` },
-              },
-            );
-            const data = await response.json();
-            userRecipe = data.recipe;
-            console.log('userRecipe from backend:', userRecipe);
-          }
-
-          // Transform to match frontend expectations
-          let baseRecipe = userRecipe;
-          if (userRecipe.recipeId && typeof userRecipe.recipeId === 'object') {
-            baseRecipe = { ...userRecipe.recipeId, ...userRecipe }; // recipeId fields take priority
-          }
-
-          const transformedUserRecipe = {
-            ...baseRecipe,
-            imageUrl: baseRecipe.imageUrl || baseRecipe.image || '', // fallback if needed
-            title: baseRecipe.title,
-            category: baseRecipe.category,
-            cookTime: baseRecipe.cookTime,
-            servings: baseRecipe.servings,
-            description: baseRecipe.description,
-            ingredients: Array.isArray(baseRecipe.ingredients)
-              ? baseRecipe.ingredients
-              : (baseRecipe.ingredients || '').split('\n').filter(Boolean),
-            instructions: Array.isArray(baseRecipe.instructions)
-              ? baseRecipe.instructions
-              : (baseRecipe.instructions || '').split('\n').filter(Boolean),
-          };
-
-          console.log('transformedUserRecipe:', transformedUserRecipe);
-
-          setRecipe(transformedUserRecipe);
-        }
-      } catch (error) {
-        console.error('Error loading recipe detail:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
     checkIfSaved();
     loadRecipeDetail();
-  }, [recipeId, sourceType, recipeDataString, user, token, isCheckingAuth]);
+  }, [
+    recipeId,
+    sourceType,
+    recipeDataString,
+    checkIfSaved,
+    recipeData,
+    user,
+    token,
+    isCheckingAuth,
+    loadRecipeDetail,
+  ]);
 
   const getYouTubeEmbedUrl = (url) => {
     // example url: https://www.youtube.com/watch?v=mTvlmY4vCug
@@ -162,50 +186,61 @@ const RecipeDetailScreen = () => {
 
     try {
       if (isSaved && favoriteId) {
-        if (!user || !user.token) {
+        if (!user || !token) {
           console.error('No user or token found in HTS!');
           return;
         }
 
-        // need to know favorite's MongoDB _id to delete
+        // remove from favorites
         const response = await fetch(`${API_URL}/${favoriteId}`, {
           method: 'DELETE',
           headers: {
-            Authorization: `Bearer ${user.token}`,
+            Authorization: `Bearer ${token}`,
           },
         });
         if (!response.ok) throw new Error('Failed to remove recipe');
+        // Re-check saved state after removal
+        await checkIfSaved();
 
         setIsSaved(false);
-        // setFavoriteId(null);
+        setFavoriteId(null);
       } else {
         // add to favorites
+        const payload =
+          sourceType === 'api'
+            ? {
+                sourceType,
+                userId: user._id,
+                apiId: String(recipe.id),
+                title: recipe.title,
+                imageUrl: recipe.imageUrl || recipe.image || '',
+                category: recipe.category,
+              }
+            : {
+                sourceType,
+                userId: user._id,
+                recipeId: recipe.id,
+                title: recipe.title,
+                imageUrl: recipe.imageUrl || recipe.image || '',
+                category: recipe.category,
+              };
 
-        if (!user || !user.token) {
-          console.error('No user or token found in ADD function!');
-          return;
-        }
-        const response = await fetch(`${API_URL}`, {
+        const response = await fetch(`${API_URL}/favorites`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${user.token}`,
+            Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({
-            sourceType: 'api',
-            apiId: recipe.idMeal,
-            title: recipe.title,
-            imageUrl: recipe.image,
-            category: recipe.category,
-          }),
+
+          body: JSON.stringify(payload),
         });
 
         if (!response.ok) throw new Error('Failed to save recipe');
-        setIsSaved(true);
+        // Re-check saved state after removal
+        await checkIfSaved();
       }
     } catch (error) {
-      console.error('Error toggling recipe save:', error);
-      Alert.alert('Error', `Something went wrong. Please try again.`);
+      Alert.alert('Error', error.message || 'Something went wrong.');
     } finally {
       setIsSaving(false);
     }
@@ -225,7 +260,7 @@ const RecipeDetailScreen = () => {
           <View style={recipeDetailStyles.imageContainer}>
             {recipe?.imageUrl ? (
               <Image
-                source={{ uri: recipe.image || recipe.imageUrl }}
+                source={{ uri: recipe.imageUrl }}
                 style={recipeDetailStyles.headerImage}
                 contentFit='cover'
               />

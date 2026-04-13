@@ -16,14 +16,29 @@ app.use(express.urlencoded({ limit: '5mb', extended: true }));
 
 const allowedOrigins = [
   'https://grub-club.onrender.com', // Render static site
-  'http://localhost:8081', // Expo web local dev (adjust port if needed)
+  'http://localhost:19006', // Expo web local dev (Expo default web port)
 ];
 
+// Log the request origin for debugging
+app.use((req, res, next) => {
+  console.log('Request Origin:', req.headers.origin);
+  next();
+});
+
+// Use a function to dynamically check allowed origins
 app.use(
   cors({
-    // origin: allowedOrigins,
-    origin: '*', // Allow all origins for development; change to allowedOrigins in production
-    credentials: true, // if you use cookies/auth
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps, curl, etc.)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      } else {
+        console.log('Blocked by CORS:', origin);
+        return callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true,
   }),
 );
 

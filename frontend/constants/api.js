@@ -1,5 +1,9 @@
-// if you're using your physical phone, change this to the deployed url
-// we have explained this in the course :-)
-export const API_URL = 'http://localhost:3000/api';
-export const API_MY_RECIPES_URL = 'http://localhost:3000/api/recipes/mine';
-export const API_RECIPE_URL = 'http://localhost:3000/api/recipes';
+// Use an environment variable for the API base URL, fallback to localhost for development
+export const API_BASE_URL =
+  process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
+
+// Build all endpoints from the base URL
+export const API_URL = API_BASE_URL; // General API base
+export const API_MY_RECIPES_URL = `${API_BASE_URL}/recipes/mine`;
+export const API_RECIPE_URL = `${API_BASE_URL}/recipes`;
+export const API_FAVORITES_URL = `${API_BASE_URL}/favorites`;

@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { useAuthStore } from '../../store/authStore';
+import { API_RECIPE_URL } from '../../constants/api';
 
 const CATEGORIES = [
   'Beef',
@@ -76,7 +77,7 @@ export default function CreateScreen() {
     try {
       setLoading(true);
 
-      const response = await fetch('http://localhost:3000/api/recipes', {
+      const response = await fetch(`${API_RECIPE_URL}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

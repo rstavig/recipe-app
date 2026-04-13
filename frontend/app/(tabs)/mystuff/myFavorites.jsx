@@ -4,7 +4,7 @@ import { useAuthStore } from '../../../store/authStore';
 import RecipeCard from '../../../components/RecipeCard';
 import { favoritesStyles } from '../../../assets/styles/favorites.styles';
 import Loader from '../../../components/Loader';
-import { API_URL } from '../../../constants/api';
+import { API_FAVORITES_URL } from '../../../constants/api';
 
 const MyFavorites = () => {
   const [favorites, setFavorites] = useState([]);
@@ -26,7 +26,7 @@ const MyFavorites = () => {
 
     const fetchFavorites = async () => {
       try {
-        const response = await fetch(`${API_URL}/favorites`, {
+        const response = await fetch(`${API_FAVORITES_URL}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',

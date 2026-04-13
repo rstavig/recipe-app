@@ -21,7 +21,8 @@ const allowedOrigins = [
 
 app.use(
   cors({
-    origin: allowedOrigins,
+    // origin: allowedOrigins,
+    origin: '*', // Allow all origins for development; change to allowedOrigins in production
     credentials: true, // if you use cookies/auth
   }),
 );

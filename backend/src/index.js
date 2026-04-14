@@ -25,6 +25,13 @@ app.use((req, res, next) => {
   next();
 });
 
+// Temporary only for development - allows all origins (not recommended for production)
+app.use(
+  cors({
+    origin: '*',
+  }),
+);
+
 // Use a function to dynamically check allowed origins
 app.use(
   cors({

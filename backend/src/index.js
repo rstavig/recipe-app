@@ -16,7 +16,7 @@ app.use(express.urlencoded({ limit: '5mb', extended: true }));
 
 const allowedOrigins = [
   'https://grub-club.onrender.com', // Render static site
-  'http://localhost:19006', // Expo web local dev (Expo default web port)
+  'http://localhost:8081', // Expo web local dev (Expo default web port)
 ];
 
 // Log the request origin for debugging
@@ -24,13 +24,6 @@ app.use((req, res, next) => {
   console.log('Request Origin:', req.headers.origin);
   next();
 });
-
-// Temporary only for development - allows all origins (not recommended for production)
-app.use(
-  cors({
-    origin: '*',
-  }),
-);
 
 // Use a function to dynamically check allowed origins
 app.use(
